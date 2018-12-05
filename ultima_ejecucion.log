@@ -1,0 +1,6 @@
+Parámetros de ejecución: 
+Condición de parada, stop = 50000
+Tamaño de la población, nIndividuos = 50
+Ficheros a ejecutar: [Ljava.lang.String;@4fca772d
+Algoritmos que se ejecutaran: 
+ESTACIONARIO
