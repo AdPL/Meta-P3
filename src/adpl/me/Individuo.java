@@ -107,9 +107,11 @@ public class Individuo {
      * Mutación de los genes de un individuo
      * @param prob_mutacion Probabilidad de mutación para cada gen
      */
-    public void mutacion(double prob_mutacion) {
+    public void mutacion(double prob_mutacion, int[][] f, int[][] d) {
+        int diferencia;
         Random rnd = new Random();
         List<Pair<Integer, Integer>> mutados = new ArrayList<>();
+        //TODO: Probabilidad no se usa
         double probabilidad = prob_mutacion * genotipo.length;
         double random;
         for ( int i = 0; i < genotipo.length; i++ ) {
@@ -124,9 +126,10 @@ public class Individuo {
         while ( mutados.size() >= 2 ) {
             gen1 = mutados.remove(rnd.nextInt(mutados.size()));
             gen2 = mutados.remove(rnd.nextInt(mutados.size()));
+            diferencia = checkMove(gen1.getKey(), gen2.getKey(), genotipo, f, d);
             genotipo[gen1.getKey()] = gen2.getValue();
             genotipo[gen2.getKey()] = gen1.getValue();
-            genotipo.toString();
+            this.valor = (this.valor + diferencia);
         }
 
         if ( mutados.size() != 0 ) {
@@ -134,9 +137,25 @@ public class Individuo {
             int posGen2 = rnd.nextInt(genotipo.length);
             int valorGen = genotipo[posGen2];
             gen2 = new Pair<>(posGen2, valorGen);
+            diferencia = checkMove(gen1.getKey(), gen2.getKey(), genotipo, f, d);
             genotipo[gen1.getKey()] = gen2.getValue();
             genotipo[gen2.getKey()] = gen1.getValue();
+            this.valor = (this.valor + diferencia);
         }
+    }
+
+    public int checkMove(int i, int j, int[] u, int[][] f, int[][] d) {
+        int k;
+        int suma = 0;
+        for ( k = 0; k < u.length; k++ ) {
+            if (i !=j && k != i && k != j) {
+                suma += f[j][k] * (d[u[i]][u[k]] - d[u[j]][u[k]])
+                        + f[i][k] * (d[u[j]][u[k]] - d[u[i]][u[k]])
+                        + f[k][j] * (d[u[k]][u[i]] - d[u[k]][u[j]])
+                        + f[k][i] * (d[u[k]][u[j]] - d[u[k]][u[i]]);
+            }
+        }
+        return suma;
     }
 
     @Override
