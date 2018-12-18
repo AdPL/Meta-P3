@@ -191,7 +191,6 @@ public class Main {
         Individuo nuevoMejor;
         Individuo aux;
         int tamPoblacion = poblacion.size();
-        int eval = 0;
         int t = 0;
         int mejorGeneracion = 0;
         Random rnd = new Random();
@@ -249,17 +248,17 @@ public class Main {
                 ////////////////////////////////////////////
 
                 hijos.get(i).evaluar(f, d);
-                eval++;
                 hijos.get(i).mutacion(prob_mutacion, f, d);
             }
 
             if ( t % 10 == 0 ) {
-                if ( busqPoblacion == 100 ) {
+                if ( busqPoblacion == 10 ) {
                     for ( int i = 0; i < tamPoblacion; i++ ) {
                         int[] dlb = new int[hijos.get(i).getGenotipo().length];
                         hijos.get(i).setGenotipo(calculoPrimerMejor(hijos.get(i), dlb, f, d, busqStop));
+                        hijos.get(i).evaluar(f, d);
                         for (int j = 0; j < dlb.length; j++) {
-                            dlb[j] = -1;
+                            dlb[j] = 0;
                         }
                     }
                 } else if ( busqPoblacion == 3 ) { //FixME: Falla este método
@@ -300,10 +299,14 @@ public class Main {
                             dlb[k] = -1;
                         }
                     }
+
+                    for ( Individuo elmejor : mejores )
+                        elmejor.evaluar(f, d);
                 } else if ( busqPoblacion == 1 ) {
                     Individuo randomBusqLocal = hijos.get(rnd.nextInt(tamPoblacion));
                     int[] dlb = new int[randomBusqLocal.getGenotipo().length];
                     randomBusqLocal.setGenotipo(calculoPrimerMejor(randomBusqLocal, dlb, f, d, busqStop));
+                    randomBusqLocal.evaluar(f, d);
                 }
             }
 
@@ -356,7 +359,7 @@ public class Main {
      */
     public static void algoritmoGeneticoEstacionario(List<Individuo> poblacion, boolean PMX, double prob_mutacion, int stop, int[][] f, int[][] d, int busqStop, int semilla) {
         Individuo mejor = poblacion.get(0), nuevoMejor;
-        int t = 0, mejorGeneracion = 0, eval = 0;
+        int t = 0, mejorGeneracion = 0;
         List<Individuo> ganadoresTorneo = new ArrayList<>();
         Random rnd = new Random();
         rnd.setSeed(semilla);
@@ -411,7 +414,6 @@ public class Main {
                 int[] dlb2 = new int[hijo2.getGenotipo().length];
                 hijo2.setGenotipo(calculoPrimerMejor(hijo1, dlb2, f, d, busqStop));
             }
-            eval += 2;
 
             ////////////////////////////////////////////
             ////  COMPARACIÓN DE LOS DESCENCIENTES  ////
