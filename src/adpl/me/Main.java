@@ -71,6 +71,7 @@ public class Main {
             }
 
             BufferedWriter writer = new BufferedWriter(new FileWriter("ejecucion.bat"));
+            BufferedWriter writerSH = new BufferedWriter(new FileWriter("ejecucion.sh"));
 
             for (String algoritmo : algoritmos) {
                 if ("estacionario".equals(algoritmo.toString())) {
@@ -79,6 +80,7 @@ public class Main {
                             for (int ite : iteracciones) {
                                 System.out.println("java -jar Metaheuristicas_Practica3.jar " + archivo + " " + semilla + " est 25 1000 100 " + ite);
                                 writer.write("java -jar Metaheuristicas_Practica3.jar " + archivo + " " + semilla + " est 25 1000 100 " + ite + "\n");
+                                writerSH.write("java -jar Metaheuristicas_Practica3.jar " + archivo + " " + semilla + " est 25 1000 100 " + ite + "\n");
                             }
                         }
                     }
@@ -90,6 +92,7 @@ public class Main {
                                 for (int ite : iteracciones) {
                                     System.out.println("java -jar Metaheuristicas_Practica3.jar " + archivo + " " + semilla + " gen 10 1000 " + pob + " " + ite);
                                     writer.write("java -jar Metaheuristicas_Practica3.jar " + archivo + " " + semilla + " gen 10 1000 " + pob + " " + ite + "\n");
+                                    writerSH.write("java -jar Metaheuristicas_Practica3.jar " + archivo + " " + semilla + " gen 10 1000 " + pob + " " + ite + "\n");
                                 }
                             }
                         }
@@ -97,6 +100,7 @@ public class Main {
                 }
             }
             writer.close();
+            writerSH.close();
         } else {
             logger.setUseParentHandlers(false);
 
@@ -133,6 +137,9 @@ public class Main {
             int f[][] = dataGestFrecuencias(contenido);
             int d[][] = dataGestLocalizaciones(contenido);
 
+            double tiempo = 0;
+            int mejorValor = 0;
+
             if ( "est".equals(algoritmo) ) {
                 fileHandler = new FileHandler("./results/" + archivo.substring(0, 5) + "_estacionario_" + semilla + "_est_25_" + generaciones + "_100_" + nIteraccionesBusqLocal + ".log");
                 fileHandler.setFormatter(simpleFormatter);
@@ -146,9 +153,10 @@ public class Main {
                 }
                 logger.log(Level.INFO, " | VERSIÓN: ESTACIONARIA | PMX OFF");
                 tStart = System.currentTimeMillis();
-                algoritmoGeneticoEstacionario(poblacion, false, prob_mutacion, generacionesLimite, f, d, nIteraccionesBusqLocal, semilla);
+                mejorValor = algoritmoGeneticoEstacionario(poblacion, false, prob_mutacion, generacionesLimite, f, d, nIteraccionesBusqLocal, semilla);
                 tEnd = System.currentTimeMillis();
                 logger.log(Level.INFO, "The task has taken " + (tEnd - tStart) + " milliseconds.");
+                tiempo = (tEnd - tStart);
                 poblacion.clear();
 
                 fileHandler.close();
@@ -167,9 +175,18 @@ public class Main {
                     poblacion.get(i).evaluar(f, d);
                 }
                 tStart = System.currentTimeMillis();
-                algoritmoGeneticoGeneracional(poblacion, true, prob_generacional, prob_mutacion, generacionesLimite, f, d, nIteraccionesBusqLocal, nIndividuosBusqLocal, semilla);
+                mejorValor = algoritmoGeneticoGeneracional(poblacion, true, prob_generacional, prob_mutacion, generacionesLimite, f, d, nIteraccionesBusqLocal, nIndividuosBusqLocal, semilla);
                 tEnd = System.currentTimeMillis();
                 logger.log(Level.INFO, "The task has taken " + (tEnd - tStart) + " milliseconds.");
+                System.out.println("The task has taken " + (tEnd - tStart) + " milliseconds.");
+                tiempo = (tEnd - tStart);
+            }
+            try {
+                BufferedWriter writer = new BufferedWriter(new FileWriter("results/resultados.txt", true));
+                writer.write(mejorValor + ";" + tiempo + ";" + archivo + ";" + nIndividuos + ";" + generaciones + ";" + nIndividuosBusqLocal + ";" + nIteraccionesBusqLocal + "\n");
+                writer.close();
+            } catch ( IOException e ) {
+                System.out.print(e.getStackTrace());
             }
         }
     }
@@ -185,7 +202,7 @@ public class Main {
      * @param d              Matriz de distancias
      * @param semilla        Semilla para la ejecución
      */
-    public static void algoritmoGeneticoGeneracional(List<Individuo> poblacion, boolean PMX, double prob_cruce, double prob_mutacion, int stop, int[][] f, int[][] d, int busqStop, int busqPoblacion, int semilla) {
+    public static int algoritmoGeneticoGeneracional(List<Individuo> poblacion, boolean PMX, double prob_cruce, double prob_mutacion, int stop, int[][] f, int[][] d, int busqStop, int busqPoblacion, int semilla) {
         Individuo mejor = obtenerMejorIndividuo(poblacion);
         Individuo elite = obtenerMejorIndividuo(poblacion);
         Individuo nuevoMejor;
@@ -201,7 +218,6 @@ public class Main {
         List<Individuo> hijos = new ArrayList<>();
 
         do {
-            t++;
             ganadoresTorneo.clear();
             ////////////////////////////////////////////
             //// PROCESO DE SELECCIÓN DE INDIVIDUOS ////
@@ -257,51 +273,27 @@ public class Main {
                         int[] dlb = new int[hijos.get(i).getGenotipo().length];
                         hijos.get(i).setGenotipo(calculoPrimerMejor(hijos.get(i), dlb, f, d, busqStop));
                         hijos.get(i).evaluar(f, d);
-                        for (int j = 0; j < dlb.length; j++) {
-                            dlb[j] = 0;
-                        }
                     }
-                } else if ( busqPoblacion == 3 ) { //FixME: Falla este método
-                    int posMejor1 = 0;
-                    int posMejor2 = hijos.size()-1;
-                    int posMejor3 = 1;
-                    Individuo mejores[] = new Individuo[3];
-                    Individuo mejor1, mejor2, mejor3;
-                    mejor1 = hijos.get(0);
-                    mejor2 = hijos.get(hijos.size()-1);
-                    mejor3 = hijos.get(1);
-
-                    for ( int i = 0; i < hijos.size()-1; i++ ) {
-                        if ( mejor1.getValor() > hijos.get(i).getValor() && mejor1.getValor() != mejor2.getValor() && mejor1.getValor() != mejor3.getValor()  ) {
-                            mejor1 = hijos.get(i);
-                            posMejor1 = i;
-                        }
+                } else if ( busqPoblacion == 3 ) {
+                    List<Individuo> mejores = new ArrayList<>();
+                    for ( int i = 0; i < 3; i++ ) {
+                        Individuo actualMejor = obtenerMejorIndividuo(hijos);
+                        mejores.add(actualMejor);
+                        hijos.remove(actualMejor);
                     }
 
-                    for ( int i = 1; i < hijos.size(); i++ ) {
-                        if ( mejor2.getValor() > hijos.get(i).getValor() && mejor1.getValor() != mejor2.getValor() && mejor2.getValor() != mejor3.getValor() ) {
-                            mejor2 = hijos.get(i);
-                            posMejor2 = i;
-                        }
+                    for ( int j = 0; j < mejores.size(); j++ ) {
+                        int[] dlb = new int[mejores.get(j).getGenotipo().length];
+                        mejores.get(j).setGenotipo(calculoPrimerMejor(mejores.get(j), dlb, f, d, busqStop));
+                        mejores.get(j).evaluar(f, d);
                     }
 
-                    for ( int i = 1; i < hijos.size(); i++ ) {
-                        if ( mejor3.getValor() > hijos.get(i).getValor() && mejor3.getValor() != mejor1.getValor() && mejor3.getValor() != mejor2.getValor() ) {
-                            mejor3 = hijos.get(i);
-                            posMejor3 = i;
-                        }
+                    for ( int i = 0; i < 3; i++ ) {
+                        hijos.add(mejores.get(i));
                     }
 
-                    for ( int j = 0; j < mejores.length; j++ ) {
-                        int[] dlb = new int[mejores[j].getGenotipo().length];
-                        mejores[j].setGenotipo(calculoPrimerMejor(mejores[j], dlb, f, d, busqStop));
-                        for (int k = 0; j < dlb.length; k++) {
-                            dlb[k] = -1;
-                        }
-                    }
+                    mejores.clear();
 
-                    for ( Individuo elmejor : mejores )
-                        elmejor.evaluar(f, d);
                 } else if ( busqPoblacion == 1 ) {
                     Individuo randomBusqLocal = hijos.get(rnd.nextInt(tamPoblacion));
                     int[] dlb = new int[randomBusqLocal.getGenotipo().length];
@@ -339,12 +331,13 @@ public class Main {
             } else {
                 mejorGeneracion++;
             }
-
+            t++;
         } while ( t < stop );
 
         logger.log(Level.INFO, mejor.toString() + " ha sido el mejor durante " + mejorGeneracion + " generaciones. | DESDE LA " + (t-mejorGeneracion+1) + " HASTA LA " + (t+1) + "." );
         logger.log(Level.INFO, "Así el mejor final es: " + mejor.toString() + " | obtenido en la generación " + (t-mejorGeneracion+1));
 
+        return mejor.getValor();
     }
 
     /**
@@ -357,7 +350,7 @@ public class Main {
      * @param d              Matriz de distancias
      * @param semilla        Semilla para la ejecución
      */
-    public static void algoritmoGeneticoEstacionario(List<Individuo> poblacion, boolean PMX, double prob_mutacion, int stop, int[][] f, int[][] d, int busqStop, int semilla) {
+    public static int algoritmoGeneticoEstacionario(List<Individuo> poblacion, boolean PMX, double prob_mutacion, int stop, int[][] f, int[][] d, int busqStop, int semilla) {
         Individuo mejor = poblacion.get(0), nuevoMejor;
         int t = 0, mejorGeneracion = 0;
         List<Individuo> ganadoresTorneo = new ArrayList<>();
@@ -367,7 +360,6 @@ public class Main {
 
         do {
             ganadoresTorneo.clear();
-            t++;
 
             ////////////////////////////////////////////
             //// PROCESO DE SELECCIÓN DE INDIVIDUOS ////
@@ -412,7 +404,7 @@ public class Main {
                 int[] dlb1 = new int[hijo1.getGenotipo().length];
                 hijo1.setGenotipo(calculoPrimerMejor(hijo1, dlb1, f, d, busqStop));
                 int[] dlb2 = new int[hijo2.getGenotipo().length];
-                hijo2.setGenotipo(calculoPrimerMejor(hijo1, dlb2, f, d, busqStop));
+                hijo2.setGenotipo(calculoPrimerMejor(hijo2, dlb2, f, d, busqStop));
             }
 
             ////////////////////////////////////////////
@@ -488,10 +480,13 @@ public class Main {
             } else {
                 mejorGeneracion++;
             }
+            t++;
         } while ( t < stop );
 
         logger.log(Level.INFO, mejor.toString() + " ha sido el mejor durante " + mejorGeneracion + " generaciones. | DESDE LA " + (t-mejorGeneracion+1) + " HASTA LA " + (t+1) + "." );
         logger.log(Level.INFO, "Así el mejor final es: " + mejor.toString() + " | obtenido en la generación " + (t-mejorGeneracion+1));
+
+        return mejor.getValor();
     }
 
     /**
